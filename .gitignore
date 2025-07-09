@@ -1,0 +1,11 @@
+.venv
+tutorial_data
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info
+cache
+*.h5ad
+*.csv
