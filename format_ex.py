@@ -1,5 +1,4 @@
 
-#%% copy data
 """
 This script performs preprocessing, quality control, normalization, and clustering analysis on two single-cell RNA-seq datasets (PBMC 3k v1 and PBMC 10k v3) using Scanpy. The workflow includes:
 
@@ -25,6 +24,7 @@ References:
 """
 import os
 
+# check if the tutorial_data folder exists, if not, create it and download the datasets
 if not os.path.exists("tutorial_data"):
     print("Folder 'tutorial_data' does not exist.")
     !mkdir tutorial_data
@@ -40,25 +40,21 @@ if not os.path.exists("tutorial_data"):
 else:
     print("Folder 'tutorial_data' already exists.")
 
-
 # from https://scanpy.readthedocs.io/en/stable/tutorials/experimental/pearson_residuals.html
-#%%
+#%% import necessary libraries
 import numpy as np
 import scanpy as sc
 import os
 import matplotlib.pyplot as plt
 
-#%%
+#%% load the datasets
 
 adata_pbmc3k = sc.read_10x_mtx("tutorial_data/pbmc3k_v1/", cache=True)
 adata_pbmc10k = sc.read_10x_mtx("tutorial_data/pbmc10k_v3/", cache=True)
-
 adata_pbmc3k.uns["name"] = "PBMC 3k (v1)"
 adata_pbmc10k.uns["name"] = "PBMC 10k (v3)"
 
-
-#%%
-# marker genes from table in pbmc3k tutorial
+#%% marker genes from table in pbmc3k tutorial
 markers = [
     "IL7R",
     "LYZ",
@@ -75,19 +71,18 @@ markers = [
 ]
 
 # %% basic filtering
-
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     adata.var_names_make_unique()
     print(adata.uns["name"], ": data shape:", adata.shape)
     sc.pp.filter_cells(adata, min_genes=200)
     sc.pp.filter_genes(adata, min_cells=3)
-# %%
+# %% calculate quality control metrics
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     adata.var["mt"] = adata.var_names.str.startswith("MT-")
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
-# %%
+# %% visualize quality control metrics
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     print(adata.uns["name"], ":")
     sc.pl.violin(
@@ -96,8 +91,7 @@ for adata in [adata_pbmc3k, adata_pbmc10k]:
         jitter=0.4,
         multi_panel=True,
     )
-# %%
-# define outliers and do the filtering for the 3k dataset
+# %% define outliers and do the filtering for the 3k dataset
 adata_pbmc3k.obs["outlier_mt"] = adata_pbmc3k.obs.pct_counts_mt > 5
 adata_pbmc3k.obs["outlier_total"] = adata_pbmc3k.obs.total_counts > 5000
 adata_pbmc3k.obs["outlier_ngenes"] = adata_pbmc3k.obs.n_genes_by_counts > 2500
@@ -113,8 +107,7 @@ adata_pbmc3k = adata_pbmc3k[~adata_pbmc3k.obs["outlier_mt"], :]
 adata_pbmc3k = adata_pbmc3k[~adata_pbmc3k.obs["outlier_total"], :]
 adata_pbmc3k = adata_pbmc3k[~adata_pbmc3k.obs["outlier_ngenes"], :]
 sc.pp.filter_genes(adata_pbmc3k, min_cells=1)
-# %%
-# define outliers and do the filtering for the 10k dataset
+# %% define outliers and do the filtering for the 10k dataset
 adata_pbmc10k.obs["outlier_mt"] = adata_pbmc10k.obs.pct_counts_mt > 20
 adata_pbmc10k.obs["outlier_total"] = adata_pbmc10k.obs.total_counts > 25000
 adata_pbmc10k.obs["outlier_ngenes"] = adata_pbmc10k.obs.n_genes_by_counts > 6000
@@ -132,13 +125,13 @@ adata_pbmc10k = adata_pbmc10k[~adata_pbmc10k.obs["outlier_mt"], :]
 adata_pbmc10k = adata_pbmc10k[~adata_pbmc10k.obs["outlier_total"], :]
 adata_pbmc10k = adata_pbmc10k[~adata_pbmc10k.obs["outlier_ngenes"], :]
 sc.pp.filter_genes(adata_pbmc10k, min_cells=1)
-# %% Compute 2000 variable genes with Pearson residuals
+# %% Compute top 2000 genes with Pearson residuals
 
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     sc.experimental.pp.highly_variable_genes(
         adata, flavor="pearson_residuals", n_top_genes=2000
     )
-# %%
+# %% Visualize highly variable genes
 fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 for ax, adata in zip(axes, [adata_pbmc3k, adata_pbmc10k]):
     hvgs = adata.var["highly_variable"]
@@ -173,22 +166,19 @@ for ax, adata in zip(axes, [adata_pbmc3k, adata_pbmc10k]):
     ax.yaxis.set_ticks_position("left")
     ax.xaxis.set_ticks_position("bottom")
 plt.legend()
-# %%
+# %% Subset to highly variable genes
 adata_pbmc3k = adata_pbmc3k[:, adata_pbmc3k.var["highly_variable"]]
 adata_pbmc10k = adata_pbmc10k[:, adata_pbmc10k.var["highly_variable"]]
-# %%
-# keep raw and depth-normalized counts for later
+# %% keep raw and depth-normalized counts for later
 adata_pbmc3k.layers["raw"] = adata_pbmc3k.X.copy()
 adata_pbmc3k.layers["sqrt_norm"] = np.sqrt(
     sc.pp.normalize_total(adata_pbmc3k, inplace=False)["X"]
 )
-
 adata_pbmc10k.layers["raw"] = adata_pbmc10k.X.copy()
 adata_pbmc10k.layers["sqrt_norm"] = np.sqrt(
     sc.pp.normalize_total(adata_pbmc10k, inplace=False)["X"]
 )
-# %%
-# pearson residuals
+# %% normalize pearson residuals
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     sc.experimental.pp.normalize_pearson_residuals(adata)
 # %% Compute PCA and t-SNE
@@ -197,24 +187,21 @@ for adata in [adata_pbmc3k, adata_pbmc10k]:
     n_cells = len(adata)
     sc.tl.tsne(adata, use_rep="X_pca")
 
-
 #%% # Leiden clustering
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=50)
     sc.tl.leiden(adata, flavor="igraph", n_iterations=2, directed=False)
-# %%
+# %% Visualize t-SNE embeddings colored by cluster and marker gene expression per block
 for adata in [adata_pbmc3k, adata_pbmc10k]:
     print(adata.uns["name"], ":")
     sc.pl.tsne(adata, color=["leiden"], cmap="tab20")
     sc.pl.tsne(adata, color=markers, layer="sqrt_norm")
-# %%
-
+# %% example on how to concatenate the two datasets, annotate batch information, and save to an HDF5 file
 from scanpy import anndata 
 xx = anndata.concat((adata_pbmc3k,adata_pbmc10k))
 xx.obs['highlow'] = xx.obs['n_genes']>500
 xx.obs['batch']='3k'
 xx.obs.iloc[adata_pbmc3k.shape[0]:, xx.obs.columns.get_loc('batch')] = '10k'
-
 sc.write('demo.h5ad', xx)
 
 # %%
