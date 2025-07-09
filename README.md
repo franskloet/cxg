@@ -54,3 +54,9 @@ xx.obs['batch']='3k'
 xx.obs.iloc[adata_pbmc3k.shape[0]:, xx.obs.columns.get_loc('batch')] = '10k'
 sc.write('demo.h5ad', xx)
 ```
+
+### Run cellxgene
+
+```bash
+cellxgene launch demo.h5ad
+```
