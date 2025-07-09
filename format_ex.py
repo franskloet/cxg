@@ -1,5 +1,28 @@
 
 #%% copy data
+"""
+This script performs preprocessing, quality control, normalization, and clustering analysis on two single-cell RNA-seq datasets (PBMC 3k v1 and PBMC 10k v3) using Scanpy. The workflow includes:
+
+1. Downloading and extracting 10x Genomics PBMC datasets if not already present.
+2. Loading the datasets into AnnData objects.
+3. Filtering cells and genes based on quality control metrics (e.g., minimum genes per cell, minimum cells per gene).
+4. Calculating mitochondrial gene content and other QC metrics.
+5. Visualizing QC metrics using violin plots.
+6. Identifying and removing outlier cells based on mitochondrial content, total counts, and number of genes.
+7. Selecting highly variable genes using Pearson residuals.
+8. Visualizing gene variability and highlighting known marker genes.
+9. Subsetting datasets to highly variable genes.
+10. Storing raw and normalized counts in AnnData layers.
+11. Normalizing data using Pearson residuals.
+12. Performing dimensionality reduction (PCA and t-SNE).
+13. Computing neighborhood graphs and performing Leiden clustering.
+14. Visualizing t-SNE embeddings colored by cluster and marker gene expression.
+15. Concatenating the two datasets, annotating batch information, and saving the combined AnnData object to an HDF5 file.
+
+References:
+- Scanpy documentation: https://scanpy.readthedocs.io/
+- PBMC 3k tutorial: https://scanpy.readthedocs.io/en/stable/tutorials/experimental/pearson_residuals.html
+"""
 import os
 
 if not os.path.exists("tutorial_data"):
@@ -185,6 +208,7 @@ for adata in [adata_pbmc3k, adata_pbmc10k]:
     sc.pl.tsne(adata, color=["leiden"], cmap="tab20")
     sc.pl.tsne(adata, color=markers, layer="sqrt_norm")
 # %%
+
 from scanpy import anndata 
 xx = anndata.concat((adata_pbmc3k,adata_pbmc10k))
 xx.obs['highlow'] = xx.obs['n_genes']>500
@@ -192,17 +216,5 @@ xx.obs['batch']='3k'
 xx.obs.iloc[adata_pbmc3k.shape[0]:, xx.obs.columns.get_loc('batch')] = '10k'
 
 sc.write('demo.h5ad', xx)
-
-# normalized_data = sc.pp.recipe_seurat(raw_data, copy=True)
-# ## Step 3: Do some basic preprocessing to run PCA and compute the neighbor graph  
-# sc.pp.pca(normalized_data)
-# sc.pp.neighbors(normalized_data)
-# ## Step 4: Infer clusters with the Louvain algorithm  
-# sc.tl.louvain(normalized_data)
-# ## Step 5: Compute tsne and umap embeddings  
-# sc.tl.umap(normalized_data)
-# ## Write to output file  
-
-
 
 # %%
