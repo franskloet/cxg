@@ -1,5 +1,5 @@
 # cxg
-## CellXGene heavily relies on scanpy, a single cell analysis python packes
+## CellXGene heavily relies on scanpy, a single cell analysis python package
 
 ### Installation
 
