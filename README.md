@@ -25,7 +25,27 @@ For reference material look at the links below
 
 ### Example code, format_ex.py
 
-Most of the code originates from [pearson_residuals tutorial](https://scanpy.readthedocs.io/en/stable/tutorials/experimental/pearson_residuals.html). Some examples have been included to add additional filters
+The of code originates from [pearson_residuals tutorial](https://scanpy.readthedocs.io/en/stable/tutorials/experimental/pearson_residuals.html). An example has been included on how to add additional filters
+
+
+#### PCA and TSNE plot
+To create the mandantory plot data run:
+```python
+for adata in [adata_pbmc3k, adata_pbmc10k]:
+    sc.pp.pca(adata, n_comps=50)
+    n_cells = len(adata)
+    sc.tl.tsne(adata, use_rep="X_pca")
+```
+
+#### Add leiden clustering
+
+```python
+for adata in [adata_pbmc3k, adata_pbmc10k]:
+    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=50)
+    sc.tl.leiden(adata, flavor="igraph", n_iterations=2, directed=False)
+```
+
+#### Own filters
 
 ```python
 xx = anndata.concat((adata_pbmc3k,adata_pbmc10k))
